@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grammar Poker — Module 1</title>
+<style>
+:root{--bg:#10231d;--panel:#17372c;--gold:#f2c66d;--cream:#fff8e9;--muted:#b8c9c0;--red:#d95c57}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at top,#245541,var(--bg) 65%);color:var(--cream);min-height:100vh}
+header{text-align:center;padding:24px 12px 12px}h1{margin:0;color:var(--gold);font-size:clamp(1.8rem,5vw,3rem)}header p{margin:6px;color:var(--muted)}
+main{max-width:1050px;margin:auto;padding:12px}.panel{background:#17372ce8;border:1px solid #456c59;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 8px 28px #0003}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}input,select,button{font:inherit;border-radius:10px;border:1px solid #668776;padding:10px 12px}input,select{background:#0c211a;color:var(--cream);min-width:0}button{background:var(--gold);color:#19261e;border:0;font-weight:750;cursor:pointer}button.secondary{background:#dce9df}button.danger{background:#e7aaa3}button:disabled{opacity:.4;cursor:not-allowed}
+label{display:block;font-size:.88rem;color:var(--muted);margin-bottom:5px}.field{flex:1;min-width:145px}.hidden{display:none!important}.status{color:var(--gold);font-weight:700}.small{font-size:.88rem;color:var(--muted)}.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.player{padding:10px;border-radius:12px;background:#0c211a;border:1px solid #456c59}.player strong{display:block}.player.active{outline:2px solid var(--gold)}.score{color:var(--gold)}
+.cards{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.card{background:var(--cream);color:#18352a;border-radius:12px;min-height:112px;width:clamp(90px,14vw,125px);padding:12px 6px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;border:3px solid #e2c77d;box-shadow:0 4px 0 #b38c43;cursor:pointer;font-weight:800;text-align:center;overflow-wrap:anywhere}.card .word{font-size:1.08rem}.card .cat{font-size:.65rem;color:#587066;text-transform:uppercase}.card.selected{transform:translateY(-7px);border-color:var(--red);box-shadow:0 4px 0 #a73d39}.card.back{background:#d7e4db;border-color:#fff8e9}.card.back .word{font-size:1.6rem;color:#23523c}
+#feed{max-height:180px;overflow:auto}.feedline{padding:5px 0;border-bottom:1px solid #345545}.sentence{font-size:1.2rem;font-weight:800;color:var(--gold)}.pill{display:inline-block;border:1px solid #668776;border-radius:99px;padding:3px 8px;margin:2px;font-size:.78rem}
+@media(max-width:550px){.panel{padding:13px}.card{width:calc(33.3% - 8px);min-height:96px}.cards{gap:8px}}
+</style>
+</head>
+<body>
+<header><h1>♠ Grammar Poker ♥</h1><p>Module 1 · Subject Pronouns + To Be</p></header>
+<main>
+<section id="setup" class="panel">
+<h2>Create a room</h2>
+<p class="small">This is a playable prototype. For real multiplayer, the room must be hosted with a shared online database; this starter version runs locally in one browser.</p>
+<div class="row">
+<div class="field"><label>Player name</label><input id="playerName" placeholder="e.g. Aisyah" maxlength="20"></div>
+<div class="field"><label>Room code</label><input id="roomCode" placeholder="e.g. GRAMMAR7" maxlength="16" value="GRAMMAR7"></div>
+<button id="startBtn">Start game</button>
+</div>
+<p class="small">To test the gameplay, enter a name and start. Shareable online rooms require deployment and multiplayer connection setup.</p>
+</section>
+<section id="game" class="hidden">
+<div class="panel">
+<div class="row" style="justify-content:space-between"><div><span class="pill">Room: <b id="roomLabel"></b></span><span class="pill">Deck: <b id="deckCount">0</b> cards</span></div><button id="newGame" class="secondary">Restart</button></div>
+<h2>Players & scores</h2><div id="players" class="players"></div>
+</div>
+<div class="panel">
+<h2>Your hand</h2><p class="small">Select cards you want to use, then submit a sentence. You need a pronoun + correct to be + complement. You can select up to 5 cards.</p>
+<div id="hand" class="cards"></div>
+<div class="row"><div class="field"><label>Or type the sentence from your cards</label><input id="sentenceInput" placeholder="She is happy."></div><button id="submitSentence">Submit sentence</button></div>
+<div class="row" style="margin-top:10px"><button id="drawBtn">Draw 1 card</button><button id="discardBtn" class="danger">Discard selected card</button><button id="clearBtn" class="secondary">Clear selection</button></div>
+<p id="feedback" class="status" aria-live="polite"></p>
+</div>
+<div class="panel"><h2>Table / Discard pile</h2><div id="tableCards" class="cards"></div><p class="small">Discarded cards appear here. Use “Draw 1 card” to refill your hand.</p></div>
+<div class="panel"><h2>Game rules</h2><ol><li>Each player starts with 5 random word cards.</li><li>On your turn, submit a grammatically correct sentence using your cards.</li><li>A correct sentence earns 1 point. Explain the choice of <i>am/is/are</i> for 1 bonus point.</li><li>Draw a card or discard one to improve your hand.</li><li>Example: <b>I am a student.</b> / <b>She is happy.</b> / <b>They are at school.</b></li></ol><p class="small">Teacher note: this prototype validates common Module 1 patterns, not every possible sentence.</p></div>
+<div class="panel"><h2>Activity log</h2><div id="feed"></div></div>
+</section>
+</main>
+<script>
+const starterDeck = [
+...Array(2).fill("I").map(word=>({word,cat:"Pronoun"})),...Array(2).fill("You").map(word=>({word,cat:"Pronoun"})),
+...Array(2).fill("He").map(word=>({word,cat:"Pronoun"})),...Array(2).fill("She").map(word=>({word,cat:"Pronoun"})),
+...Array(2).fill("It").map(word=>({word,cat:"Pronoun"})),...Array(2).fill("We").map(word=>({word,cat:"Pronoun"})),...Array(2).fill("They").map(word=>({word,cat:"Pronoun"})),
+...Array(4).fill("am").map(word=>({word,cat:"To be"})),...Array(4).fill("is").map(word=>({word,cat:"To be"})),...Array(4).fill("are").map(word=>({word,cat:"To be"})),
+...["a student","happy","thirteen years old","a teacher","tall","my friend"].flatMap(word=>Array(3).fill({word,cat:"Complement"})),
+...["at school","in the classroom","very kind","from Indonesia"].flatMap(word=>Array(3).fill({word,cat:"Extra"}))
+];
+let deck=[], hand=[], selected=new Set(), players=[], current=0, discard=[];
+const $=id=>document.getElementById(id);
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function log(s){let d=document.createElement("div");d.className="feedline";d.textContent=s;$("feed").prepend(d)}
+function cardNode(c,i,back=false){let el=document.createElement("div");el.className="card"+(back?" back":"")+(selected.has(i)?" selected":"");el.innerHTML=`<span class="cat">${back?"Hidden card":c.cat}</span><span class="word">${back?"🂠":c.word}</span><span class="cat">GRAMMAR POKER</span>`;if(!back)el.onclick=()=>{if(selected.has(i))selected.delete(i);else if(selected.size<5)selected.add(i);renderHand()};return el}
+function renderHand(){$("hand").innerHTML="";hand.forEach((c,i)=>$("hand").append(cardNode(c,i)));$("deckCount").textContent=deck.length}
+function renderPlayers(){$("players").innerHTML="";players.forEach((p,i)=>{let el=document.createElement("div");el.className="player"+(i===current?" active":"");el.innerHTML=`<strong>${p.name}</strong><span class="score">${p.score} points</span><div class="small">${i===0?"You":"Player"}</div>`;$("players").append(el)})}
+function renderTable(){$("tableCards").innerHTML="";discard.slice(-12).forEach(c=>$("tableCards").append(cardNode(c,-1,true)))}
+function render(){renderHand();renderPlayers();renderTable()}
+function draw(){if(!deck.length){$("feedback").textContent="The deck is empty. Restart to play again.";return}hand.push(deck.pop());selected.clear();render();$("feedback").textContent="Drew one card."}
+function normalize(s){return s.toLowerCase().replace(/[.!?]/g,"").replace(/\s+/g," ").trim()}
+function validateSentence(raw){
+ let s=normalize(raw), tokens=s.split(" "); if(tokens.length<3)return "Add a subject, a form of to be, and a complement.";
+ let pronouns=["i","you","he","she","it","we","they"], p=tokens[0];
+ if(!pronouns.includes(p))return "Start with a subject pronoun: I, you, he, she, it, we, or they.";
+ let expected=p==="i"?"am":["you","we","they"].includes(p)?"are":"is";
+ if(tokens[1]!==expected)return `Use “${expected}” with “${p}”.`;
+ let complement=tokens.slice(2).join(" ");
+ let valid=["a student","happy","thirteen years old","a teacher","tall","my friend","at school","in the classroom","very kind","from indonesia","my friends","students","kind"];
+ if(!valid.includes(complement) && !valid.some(v=>complement.startsWith(v+" ")))return "Choose a suitable complement from the cards (e.g., happy, a student, at school).";
+ return "Correct!";
+}
+function submit(){
+ let raw=$("sentenceInput").value.trim();
+ if(!raw && selected.size){raw=hand.filter((_,i)=>selected.has(i)).map(c=>c.word).join(" ")}
+ if(!raw){$("feedback").textContent="Select your cards or type a sentence first.";return}
+ let result=validateSentence(raw);
+ if(result==="Correct!"){
+  players[current].score+=1;
+  let tokens=normalize(raw).split(" ");let why=tokens[0]==="i"?"I uses am.":["you","we","they"].includes(tokens[0])?"You/We/They use are.":"He/She/It uses is.";
+  let explain=confirm(`Correct sentence!\n${why}\nPress OK to add a bonus point if you can explain the rule; Cancel for 1 point only.`);
+  if(explain)players[current].score+=1;
+  log(`${players[current].name}: “${raw}” — correct (+${explain?2:1})`);
+  // remove selected cards from hand, or leave typed-only play unchanged
+  if(selected.size){hand=hand.filter((_,i)=>!selected.has(i));selected.clear()}
+  $("sentenceInput").value="";$("feedback").textContent="Well done! "+why;
+  current=(current+1)%players.length;
+ }else{$("feedback").textContent=result}
+ render();
+}
+function start(){
+ let name=$("playerName").value.trim()||"Player 1";let room=$("roomCode").value.trim().toUpperCase()||"GRAMMAR7";
+ players=[{name,score:0},{name:"Player 2",score:0}];current=0;deck=shuffle(starterDeck.map(c=>({...c})));hand=deck.splice(0,5);discard=[];selected.clear();
+ $("setup").classList.add("hidden");$("game").classList.remove("hidden");$("roomLabel").textContent=room;$("feed").innerHTML="";log(`${name} started a local demo room (${room}).`);render();
+}
+$("startBtn").onclick=start;$("newGame").onclick=()=>{if(confirm("Restart the game?")){ $("game").classList.add("hidden");$("setup").classList.remove("hidden") }};
+$("drawBtn").onclick=draw;
+$("discardBtn").onclick=()=>{if(selected.size!==1){$("feedback").textContent="Select exactly one card to discard.";return}let idx=[...selected][0];discard.push(hand.splice(idx,1)[0]);selected.clear();render();$("feedback").textContent="Card discarded.";log(`${players[current].name} discarded a card.`)};
+$("clearBtn").onclick=()=>{selected.clear();renderHand()};
+$("submitSentence").onclick=submit;
+</script>
+</body></html>
